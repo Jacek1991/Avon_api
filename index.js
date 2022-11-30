@@ -16,7 +16,7 @@ const december = require("./december").products
 const catalogNew = require("./catalogueNew");
 const orders = require("./orders");
 const bcrypt = require("bcrypt")
-
+const cors = require('cors')
 
 const sourceHeaders = {
     'X-BLToken': SOURCE_API_TOKEN
@@ -39,6 +39,7 @@ const User = mongoose.model('user', UserSchema);
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
+app.use(cors());
 app.get("/catalogue_new", (req, res) => {
     res.json({ products: catalogNew.products });
 })
