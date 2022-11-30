@@ -330,7 +330,7 @@ app.get("/products", (req, resp) => {
     var userId = req.query.userId ? req.query.userId : "";
     User.findOne({ _id: userId }, (error, user) => {
         if (error) {
-            res.status(400).json({ error: "Błąd serwera" })
+            resp.status(400).json({ error: "Błąd serwera" })
         } else {
             const token = user.baselinkerToken;
             const storageId = user.storageId;
