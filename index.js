@@ -327,190 +327,197 @@ app.get("/copy", (req, res) => {
 
 });
 app.get("/products", (req, resp) => {
-    var userId = req.query.userId ? req.query.userId : "";
-    User.findOne({ _id: userId }, (error, user) => {
-        if (error) {
-            resp.status(400).json({ error: "Błąd serwera" })
-        } else {
-            const token = user.baselinkerToken;
-            const storageId = user.storageId;
-            const priceGroupId = user.priceGroupId;
-            const headers = {
-                'X-BLToken': token
-            }
-            const methodParams = JSON.stringify({ 'inventory_id': storageId });
-            const apiParams = new URLSearchParams({
-                method: "getInventoryProductsList",
-                parameters: methodParams
-            });
-            axios.post(API_URL, apiParams, {
-                headers: headers
-            }).then(res => {
-                const productIds = Object.keys(res.data.products).map(el => parseInt(el));
-                const methodParams2 = JSON.stringify({ 'inventory_id': storageId, products: productIds });
-                const apiParams2 = new URLSearchParams({
-                    method: "getInventoryProductsData",
-                    parameters: methodParams2
-                })
-                axios.post(API_URL, apiParams2, {
+    try {
+        var userId = req.query.userId ? req.query.userId : "";
+        User.findOne({ _id: userId }, (error, user) => {
+            if (error) {
+                resp.status(400).json({ error: "Błąd serwera" })
+            } else {
+                const token = user.baselinkerToken;
+                const storageId = user.storageId;
+                const priceGroupId = user.priceGroupId;
+                const headers = {
+                    'X-BLToken': token
+                }
+                const methodParams = JSON.stringify({ 'inventory_id': storageId });
+                const apiParams = new URLSearchParams({
+                    method: "getInventoryProductsList",
+                    parameters: methodParams
+                });
+                axios.post(API_URL, apiParams, {
                     headers: headers
-                }).then(res2 => {
-                    const resProducts = Object.entries(res2.data.products).map(el => {
-                        return {
-                            _id: el[0],
-                            name: el[1].text_fields.name,
-                            price: parseFloat(el[1].prices[priceGroupId]),
-                            sku: el[1].sku,
-                            imageUrl: Object.values(el[1].images)[0],
-                            soldQuantity: 0
-                        }
-                    });
-                    const methodParams3 = JSON.stringify({ 'inventory_id': storageId, page: 2 });
-                    const apiParams3 = new URLSearchParams({
-                        method: "getInventoryProductsList",
-                        parameters: methodParams3
+                }).then(res => {
+                    const productIds = Object.keys(res.data.products).map(el => parseInt(el));
+                    const methodParams2 = JSON.stringify({ 'inventory_id': storageId, products: productIds });
+                    const apiParams2 = new URLSearchParams({
+                        method: "getInventoryProductsData",
+                        parameters: methodParams2
                     })
-                    axios.post(API_URL, apiParams3, {
+                    axios.post(API_URL, apiParams2, {
                         headers: headers
-                    }).then(res3 => {
-                        const productIds2 = Object.keys(res3.data.products).map(el => parseInt(el));
-                        const methodParams4 = JSON.stringify({ 'inventory_id': storageId, products: productIds2 });
-                        const apiParams4 = new URLSearchParams({
-                            method: "getInventoryProductsData",
-                            parameters: methodParams4
-                        })
-                        axios.post(API_URL, apiParams4, {
-                            headers: headers
-                        }).then(async res4 => {
-                            resProducts.push(...Object.entries(res4.data.products).map(el => {
-                                return {
-                                    _id: el[0],
-                                    name: el[1].text_fields.name,
-                                    price: parseFloat(el[1].prices[priceGroupId]),
-                                    sku: el[1].sku,
-                                    imageUrl: Object.values(el[1].images)[0],
-                                    soldQuantity: 0
-                                }
-                            }));
-                            const orders = [];
-                            const getOrders = async function(date) {
-                                var methodParams6 = JSON.stringify({ "date_confirmed_from": date + 1 });
-                                var apiParams6 = new URLSearchParams({
-                                    method: "getOrders",
-                                    parameters: methodParams6
-                                })
-                                axios.post(API_URL, apiParams6, {
-                                    headers: headers
-                                }).then(res6 => {
-                                    var length = res6.data.orders.length;
-                                    var lastDate = res6.data.orders[length - 1].date_confirmed;
-                                    orders.push(...res6.data.orders);
-                                    if (length === 100) {
-                                        getOrders(lastDate);
-                                    } else {
-                                        orders.forEach(order => {
-                                            order.products.forEach(product => {
-                                                var found = resProducts.find(resProduct => resProduct._id == product.product_id);
-                                                if (found) {
-                                                    found.soldQuantity += product.quantity;
-                                                }
-                                            })
-                                        })
-                                        resProducts.sort((a, b) => b.soldQuantity - a.soldQuantity);
-                                        resp.send({ value: resProducts });
-                                    }
-                                })
+                    }).then(res2 => {
+                        const resProducts = Object.entries(res2.data.products).map(el => {
+                            return {
+                                _id: el[0],
+                                name: el[1].text_fields.name,
+                                price: parseFloat(el[1].prices[priceGroupId]),
+                                sku: el[1].sku,
+                                imageUrl: Object.values(el[1].images)[0],
+                                soldQuantity: 0
                             }
-
-                            const apiOrders = await getOrders(0);
-
-
+                        });
+                        const methodParams3 = JSON.stringify({ 'inventory_id': storageId, page: 2 });
+                        const apiParams3 = new URLSearchParams({
+                            method: "getInventoryProductsList",
+                            parameters: methodParams3
                         })
+                        axios.post(API_URL, apiParams3, {
+                            headers: headers
+                        }).then(res3 => {
+                            const productIds2 = Object.keys(res3.data.products).map(el => parseInt(el));
+                            const methodParams4 = JSON.stringify({ 'inventory_id': storageId, products: productIds2 });
+                            const apiParams4 = new URLSearchParams({
+                                method: "getInventoryProductsData",
+                                parameters: methodParams4
+                            })
+                            axios.post(API_URL, apiParams4, {
+                                headers: headers
+                            }).then(async res4 => {
+                                resProducts.push(...Object.entries(res4.data.products).map(el => {
+                                    return {
+                                        _id: el[0],
+                                        name: el[1].text_fields.name,
+                                        price: parseFloat(el[1].prices[priceGroupId]),
+                                        sku: el[1].sku,
+                                        imageUrl: Object.values(el[1].images)[0],
+                                        soldQuantity: 0
+                                    }
+                                }));
+                                const orders = [];
+                                const getOrders = async function(date) {
+                                    var methodParams6 = JSON.stringify({ "date_confirmed_from": date + 1 });
+                                    var apiParams6 = new URLSearchParams({
+                                        method: "getOrders",
+                                        parameters: methodParams6
+                                    })
+                                    axios.post(API_URL, apiParams6, {
+                                        headers: headers
+                                    }).then(res6 => {
+                                        var length = res6.data.orders.length;
+                                        var lastDate = res6.data.orders[length - 1].date_confirmed;
+                                        orders.push(...res6.data.orders);
+                                        if (length === 100) {
+                                            getOrders(lastDate);
+                                        } else {
+                                            orders.forEach(order => {
+                                                order.products.forEach(product => {
+                                                    var found = resProducts.find(resProduct => resProduct._id == product.product_id);
+                                                    if (found) {
+                                                        found.soldQuantity += product.quantity;
+                                                    }
+                                                })
+                                            })
+                                            resProducts.sort((a, b) => b.soldQuantity - a.soldQuantity);
+                                            resp.send({ value: resProducts });
+                                        }
+                                    })
+                                }
+
+                                const apiOrders = await getOrders(0);
+
+
+                            })
+                        })
+
+
                     })
+
+
 
 
                 })
-
-
-
-
-            })
-        }
-    })
+            }
+        })
+    } catch (err) {
+        res.status(500).json({ error: "Błąd serwera" })
+    }
 
 })
 
 app.post("/prices", (req, res) => {
-    var userId = req.query.userId ? req.query.userId : "";
-    var changeSku = req.query.changeSku ? req.query.changeSku === "true" : false;
-    User.findOne({ _id: userId }, (error, user) => {
-        if (error) {
-            res.status(500).json({ error: "Błąd serwera" })
-        } else {
-            const token = user.baselinkerToken;
-            const storageId = user.storageId;
-            const priceGroupId = user.priceGroupId;
-            const headers = {
-                'X-BLToken': token
-            }
-            const resProducts = JSON.parse(Object.keys(req.body)[0]),
-                baselinkerResProducts = [];
-            resProducts.forEach(product => {
-                var obj = {}
-                obj[product._id] = {}
-                obj[product._id][priceGroupId] = product.price;
-                baselinkerResProducts.push(obj);
-            })
-            const productsObject = {};
+    try {
+        var userId = req.query.userId ? req.query.userId : "";
+        var changeSku = req.query.changeSku ? req.query.changeSku === "true" : false;
+        User.findOne({ _id: userId }, (error, user) => {
+            if (error) {
+                res.status(500).json({ error: "Błąd serwera" })
+            } else {
+                const token = user.baselinkerToken;
+                const storageId = user.storageId;
+                const priceGroupId = user.priceGroupId;
+                const headers = {
+                    'X-BLToken': token
+                }
+                const resProducts = JSON.parse(Object.keys(req.body)[0]),
+                    baselinkerResProducts = [];
+                resProducts.forEach(product => {
+                    var obj = {}
+                    obj[product._id] = {}
+                    obj[product._id][priceGroupId] = product.price;
+                    baselinkerResProducts.push(obj);
+                })
+                const productsObject = {};
 
-            baselinkerResProducts.forEach(el => {
-                productsObject[Object.keys(el)[0]] = Object.values(el)[0]
-            })
-            const methodParamsObject = JSON.stringify({ 'inventory_id': storageId, products: productsObject });
-            const apiParams2 = new URLSearchParams({
-                method: "updateInventoryProductsPrices",
-                parameters: methodParamsObject
-            });
-            axios.post(API_URL, apiParams2, {
-                    headers: headers
-                }).then(resp => {
-                    var countSuccessPrice = resp.data.counter
-                    countErrorPrice = Object.entries(resp.data.warnings).length;
-                    if (resp.data.status === 'SUCCESS') {
-                        if (changeSku) {
-                            const promises = [];
-                            resProducts.forEach(product => {
-                                var methodParamss = JSON.stringify({ 'inventory_id': storageId, 'product_id': product._id, 'sku': product.catalogSku });
-                                var apiParamss = new URLSearchParams({
-                                    method: "addInventoryProduct",
-                                    parameters: methodParamss
-                                });
-                                let promise = axios.post(API_URL, apiParamss, {
-                                    headers: headers
-                                });
-                                promises.push(promise);
-
-                            })
-                            Promise.allSettled(promises)
-                                .then(values => {
-                                    var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
-                                    var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
-                                    res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
-                                })
-                                .catch(err => {
+                baselinkerResProducts.forEach(el => {
+                    productsObject[Object.keys(el)[0]] = Object.values(el)[0]
+                })
+                const methodParamsObject = JSON.stringify({ 'inventory_id': storageId, products: productsObject });
+                const apiParams2 = new URLSearchParams({
+                    method: "updateInventoryProductsPrices",
+                    parameters: methodParamsObject
+                });
+                axios.post(API_URL, apiParams2, {
+                        headers: headers
+                    }).then(resp => {
+                        var countSuccessPrice = resp.data.counter
+                        countErrorPrice = Object.entries(resp.data.warnings).length;
+                        if (resp.data.status === 'SUCCESS') {
+                            if (changeSku) {
+                                const promises = [];
+                                resProducts.forEach(product => {
+                                    var methodParamss = JSON.stringify({ 'inventory_id': storageId, 'product_id': product._id, 'sku': product.catalogSku });
+                                    var apiParamss = new URLSearchParams({
+                                        method: "addInventoryProduct",
+                                        parameters: methodParamss
+                                    });
+                                    let promise = axios.post(API_URL, apiParamss, {
+                                        headers: headers
+                                    });
+                                    promises.push(promise);
 
                                 })
-                        } else {
-                            res.send({ countSuccessPrice, countErrorPrice });
+                                Promise.allSettled(promises)
+                                    .then(values => {
+                                        var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
+                                        var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
+                                        res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
+                                    })
+                                    .catch(err => {
+
+                                    })
+                            } else {
+                                res.send({ countSuccessPrice, countErrorPrice });
+                            }
                         }
-                    }
-                })
-                .catch(error => {
-                    res.status(500).json({ error: "Błąd serwera" })
-                })
-        }
-    })
-
+                    })
+                    .catch(error => {
+                        res.status(500).json({ error: "Błąd serwera" })
+                    })
+            }
+        })
+    } catch (err) {
+        res.status(500).json({ error: "Błąd serwera" })
+    }
 })
 
 
