@@ -403,10 +403,10 @@ app.get("/products", (req, resp) => {
                                     axios.post(API_URL, apiParams6, {
                                         headers: headers
                                     }).then(res6 => {
-                                        var length = res6.data.orders.length;
-                                        var lastDate = res6.data.orders[length - 1].date_confirmed;
+                                        var length = res6.data.orders ? res6.data.orders.length : 0;
                                         orders.push(...res6.data.orders);
                                         if (length === 100) {
+                                            var lastDate = res6.data.orders[length - 1].date_confirmed;
                                             getOrders(lastDate);
                                         } else {
                                             orders.forEach(order => {
