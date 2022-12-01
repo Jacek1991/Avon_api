@@ -147,7 +147,7 @@ app.get("/catalogue/:month", (req, res) => {
                             }
                         }
                         resProducts.push({
-                            name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`,
+                            name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
                             sku: variant.lineNumber,
                             price: product.promotionPrice ? product.promotionPrice.toFixed(2) : product.hasPromotions && !product.isConditional ? "0" : product.price.toFixed(2),
                             finalPrice: product.promotionPrice ? Math.ceil(product.promotionPrice * (100 - productDiscount)) / 100 : product.hasPromotions && !product.isConditional ? 0 : Math.ceil(product.price * (100 - productDiscount)) / 100,
