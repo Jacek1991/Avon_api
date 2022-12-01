@@ -147,7 +147,7 @@ app.get("/catalogue/:month", (req, res) => {
                             }
                         }
                         resProducts.push({
-                            name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+                            name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`,
                             sku: variant.lineNumber,
                             price: product.promotionPrice ? product.promotionPrice.toFixed(2) : product.hasPromotions && !product.isConditional ? "0" : product.price.toFixed(2),
                             finalPrice: product.promotionPrice ? Math.ceil(product.promotionPrice * (100 - productDiscount)) / 100 : product.hasPromotions && !product.isConditional ? 0 : Math.ceil(product.price * (100 - productDiscount)) / 100,
@@ -442,6 +442,7 @@ app.get("/products", (req, resp) => {
 
 app.post("/prices", (req, res) => {
     var userId = req.query.userId ? req.query.userId : "";
+    var changeSku = req.query.changeSku ? req.query.changeSku === "true" : false;
     User.findOne({ _id: userId }, (error, user) => {
         if (error) {
             res.status(500).json({ error: "Błąd serwera" })
@@ -473,8 +474,35 @@ app.post("/prices", (req, res) => {
             axios.post(API_URL, apiParams2, {
                     headers: headers
                 }).then(resp => {
+                    var countSuccessPrice = resp.data.counter
+                    countErrorPrice = Object.entries(resp.data.warnings).length;
                     if (resp.data.status === 'SUCCESS') {
-                        res.send({ countSuccess: resp.data.counter, countError: Object.entries(resp.data.warnings).length });
+                        if (changeSku) {
+                            const promises = [];
+                            resProducts.forEach(product => {
+                                var methodParamss = JSON.stringify({ 'inventory_id': storageId, 'product_id': product._id, 'sku': product.catalogSku });
+                                var apiParamss = new URLSearchParams({
+                                    method: "addInventoryProduct",
+                                    parameters: methodParamss
+                                });
+                                let promise = axios.post(API_URL, apiParamss, {
+                                    headers: headers
+                                });
+                                promises.push(promise);
+
+                            })
+                            Promise.allSettled(promises)
+                                .then(values => {
+                                    var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
+                                    var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
+                                    res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
+                                })
+                                .catch(err => {
+
+                                })
+                        } else {
+                            res.send({ countSuccessPrice, countErrorPrice });
+                        }
                     }
                 })
                 .catch(error => {
