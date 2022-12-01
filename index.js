@@ -449,7 +449,7 @@ app.post("/prices", (req, res) => {
         var userId = req.query.userId ? req.query.userId : "";
         var changeSku = req.query.changeSku ? req.query.changeSku === "true" : false;
         User.findOne({ _id: userId }, (error, user) => {
-            if (error) {
+            if (error || !user) {
                 res.status(500).json({ error: "Błąd serwera" })
             } else {
                 const token = user.baselinkerToken;
@@ -519,8 +519,6 @@ app.post("/prices", (req, res) => {
         res.status(500).json({ error: "Błąd serwera" })
     }
 })
-
-
 
 const PORT = process.env.PORT || 1337;
 app.listen(PORT, () => {
