@@ -13,6 +13,7 @@ const API_URL = 'https://api.baselinker.com/connector.php';
 const FormData = require('form-data');
 const catalog = require("./catalogue");
 const december = require("./december").products
+const january = require("./january").products
 const catalogNew = require("./catalogueNew");
 const orders = require("./orders");
 const bcrypt = require("bcrypt")
@@ -114,14 +115,14 @@ app.get("/catalogue/:month", (req, res) => {
     // }
     var discount = 40;
     var userId = req.query.userId ? req.query.userId : "";
-    if (req.params.month == 12) {
-        skus = december.map(el => el.sku);
+    if (req.params.month == 1) {
+        skus = january.map(el => el.sku);
     }
     User.findOne({ _id: userId }, (error, user) => {
         if (error) {} else {
             discount = user.discount;
         }
-        axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202212/?brochureId=C12_PL_R_CORE", { skus })
+        axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202301/?brochureId=C01_PL_R_CORE", { skus })
             .then(resp => {
                 const resProducts = [];
                 resp.data.result.filter(el => el.categoryTags.length).forEach(product => {
