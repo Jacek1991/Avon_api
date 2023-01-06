@@ -125,7 +125,7 @@ app.get("/catalogue/:month", (req, res) => {
         axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202301/?brochureId=C01_PL_R_CORE", { skus })
             .then(resp => {
                 const resProducts = [];
-                resp.data.result.filter(el => el.categoryTags.length).forEach(product => {
+                resp.data.result.filter(el => el.categoryTags && el.categoryTags.length).forEach(product => {
                     product.variantGroups[0].variants.forEach(variant => {
                         var productDiscount = product.isConditional ? 10 : product.categoryTags.findIndex(el => el === "Akcesoria") > -1 ? 20 : discount;
 

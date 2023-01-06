@@ -1,6 +1,5 @@
 module.exports = {
-    products: [
-        {
+    products: [{
             "id": 102183,
             "sku": "102183-9161866660405842552",
             "name": "Cie\u0144 do powiek Perfect Wear",
