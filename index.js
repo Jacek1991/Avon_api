@@ -14,10 +14,12 @@ const FormData = require('form-data');
 const catalog = require("./catalogue");
 const december = require("./december").products
 const january = require("./january").products
+const february = require("./february").products
 const catalogNew = require("./catalogueNew");
 const orders = require("./orders");
 const bcrypt = require("bcrypt")
 const cors = require('cors')
+const fs = require("fs")
 
 const sourceHeaders = {
     'X-BLToken': SOURCE_API_TOKEN
@@ -117,52 +119,62 @@ app.get("/catalogue/:month", (req, res) => {
     var userId = req.query.userId ? req.query.userId : "";
     if (req.params.month == 1) {
         skus = january.map(el => el.sku);
+    } else if (req.params.month == 2) {
+        skus = february.map(el => el.sku);
     }
     User.findOne({ _id: userId }, (error, user) => {
         if (error) {} else {
             discount = user.discount;
         }
-        axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202301/?brochureId=C01_PL_R_CORE", { skus })
-            .then(resp => {
-                const resProducts = [];
-                resp.data.result.filter(el => el.categoryTags && el.categoryTags.length).forEach(product => {
-                    product.variantGroups[0].variants.forEach(variant => {
-                        var productDiscount = product.isConditional ? 10 : product.categoryTags.findIndex(el => el === "Akcesoria") > -1 ? 20 : discount;
+        // fs.writeFile("./test.txt", skus.map(el => '"' + el + '"').join(", "), function(err) {
+        //     if (err) {
+        //         return console.log(err);
+        //     }
+        //     console.log("The file was saved!");
+        // });
+        // axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202302/?brochureId=C02_PL_R_CORE", { skus })
+        //     .then(resp => {
+        //         const resProducts = [];
+        //         resp.data.result.filter(el => el.categoryTags && el.categoryTags.length).forEach(product => {
+        //             product.variantGroups[0].variants.forEach(variant => {
+        //                 var productDiscount = product.isConditional ? 10 : product.categoryTags.findIndex(el => el === "Akcesoria") > -1 ? 20 : discount;
 
-                        if (product.promotions.length) {
-                            if (product.promotions[0].description.includes("przy zakupie dwóch sztuk")) {
-                                var stringPrice = product.promotions[0].description.split(" ").map(el => el.replace(",", ".")).find(el => !isNaN(el));
-                                product.promotionPrice = parseFloat(stringPrice);
-                            } else if (product.promotions[0].description.includes("Kup 1 za") && product.promotions[0].description.includes("a drug")) {
-                                var prices = product.promotions[0].description.split("Kup 1 za")[1].split(" ").map(el => {
-                                    if (el.charAt(el.length - 1) === ",") {
-                                        el = el.slice(0, -1);
-                                    }
-                                    return el.replace(",", ".")
-                                }).filter(el => !!el && !isNaN(el)).map(el => parseFloat(el));
-                                var sum = 0;
-                                prices.forEach(el => { sum += el });
-                                if (sum > 0) {
-                                    product.promotionPrice = Math.ceil(sum * 50) / 100;
-                                }
-                            }
-                        }
-                        resProducts.push({
-                            name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`,
-                            sku: variant.lineNumber,
-                            price: product.promotionPrice ? product.promotionPrice.toFixed(2) : product.hasPromotions && !product.isConditional ? "0" : product.price.toFixed(2),
-                            finalPrice: product.promotionPrice ? Math.ceil(product.promotionPrice * (100 - productDiscount)) / 100 : product.hasPromotions && !product.isConditional ? 0 : Math.ceil(product.price * (100 - productDiscount)) / 100,
-                            promotion: product.promotions.length ? product.promotions[0].description : "",
-                            discount: productDiscount,
-                            imageUrl: product.imageUrls[0]
-                        })
-                    })
-                })
-                res.json({ products: resProducts, discount: discount });
-            })
-            .catch(err => {
-                res.status(500).json({ error: "Błąd serwera" })
-            })
+        //                 if (product.promotions.length) {
+        //                     if (product.promotions[0].description.includes("przy zakupie dwóch sztuk")) {
+        //                         var stringPrice = product.promotions[0].description.split(" ").map(el => el.replace(",", ".")).find(el => !isNaN(el));
+        //                         product.promotionPrice = parseFloat(stringPrice);
+        //                     } else if (product.promotions[0].description.includes("Kup 1 za") && product.promotions[0].description.includes("a drug")) {
+        //                         var prices = product.promotions[0].description.split("Kup 1 za")[1].split(" ").map(el => {
+        //                             if (el.charAt(el.length - 1) === ",") {
+        //                                 el = el.slice(0, -1);
+        //                             }
+        //                             return el.replace(",", ".")
+        //                         }).filter(el => !!el && !isNaN(el)).map(el => parseFloat(el));
+        //                         var sum = 0;
+        //                         prices.forEach(el => { sum += el });
+        //                         if (sum > 0) {
+        //                             product.promotionPrice = Math.ceil(sum * 50) / 100;
+        //                         }
+        //                     }
+        //                 }
+        //                 resProducts.push({
+        //                     name: `${product.name} ${variant.name} ${product.unitAndMeasureInformation? product.unitAndMeasureInformation : ""}`,
+        //                     sku: variant.lineNumber,
+        //                     price: product.promotionPrice ? product.promotionPrice.toFixed(2) : product.hasPromotions && !product.isConditional ? "0" : product.price.toFixed(2),
+        //                     finalPrice: product.promotionPrice ? Math.ceil(product.promotionPrice * (100 - productDiscount)) / 100 : product.hasPromotions && !product.isConditional ? 0 : Math.ceil(product.price * (100 - productDiscount)) / 100,
+        //                     promotion: product.promotions.length ? product.promotions[0].description : "",
+        //                     discount: productDiscount,
+        //                     imageUrl: product.imageUrls[0],
+        //                     avonSku: variant.sku
+        //                 })
+        //             })
+        //         })
+        //         res.json({ products: february, discount: discount });
+        //     })
+        //     .catch(err => {
+        //         res.status(500).json({ error: "Błąd serwera" })
+        //     })
+        res.json({ products: february, discount: discount });
     });
 
 
@@ -516,6 +528,66 @@ app.post("/prices", (req, res) => {
                     })
             }
         })
+    } catch (err) {
+        res.status(500).json({ error: "Błąd serwera" })
+    }
+})
+
+app.post("/invoice", (req, res) => {
+    try {
+        var userId = req.query.userId ? req.query.userId : "",
+            orderNr = req.query.orderNr ? req.query.orderNr : "";
+        if (orderNr) {
+            User.findOne({ _id: userId }, (error, user) => {
+                if (error || !user) {
+                    res.status(500).json({ error: "Błąd serwera" })
+                } else {
+                    const token = user.baselinkerToken;
+                    const storageId = user.storageId;
+                    const priceGroupId = user.priceGroupId;
+                    const headers = {
+                        'X-BLToken': token
+                    }
+                    const resProducts = JSON.parse(Object.keys(req.body)[0]);
+                    const promises = [];
+                    var sum = 0;
+                    var sum2 = 0;
+                    resProducts.forEach(product => {
+                        sum += (product.price + 0.2) * product.amount
+                        sum2 += product.price * product.amount
+                        var methodParamss = JSON.stringify({
+                            'order_id': orderNr,
+                            'product_id': product.id,
+                            "price_brutto": product.price + 0.2,
+                            "tax_rate": 23,
+                            "name": product.name,
+                            "quantity": product.amount
+                        });
+                        var apiParamss = new URLSearchParams({
+                            method: "addOrderProduct",
+                            parameters: methodParamss
+                        });
+                        let promise = axios.post(API_URL, apiParamss, {
+                            headers: headers
+                        });
+                        promises.push(promise);
+
+                    })
+                    Promise.allSettled(promises)
+                        .then(values => {
+                            var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
+                            var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
+                            res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
+                        })
+                        .catch(err => {
+
+                        })
+
+                }
+            })
+        } else {
+            res.status(500).json({ error: "Podaj nr zamówienia" })
+        }
     } catch (err) {
         res.status(500).json({ error: "Błąd serwera" })
     }
