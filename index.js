@@ -15,6 +15,11 @@ const catalog = require("./catalogue");
 const december = require("./december").products
 const january = require("./january").products
 const february = require("./february").products
+const march = require("./march").products
+const april = require("./april").products
+const june = require("./june").products
+const july = require("./july").products
+const aprilFull = require("./aprilFull").products
 const catalogNew = require("./catalogueNew");
 const orders = require("./orders");
 const bcrypt = require("bcrypt")
@@ -92,7 +97,13 @@ app.post("/register", (req, res) => {
 
 })
 app.post("/login", (req, res) => {
-    var data = JSON.parse(Object.keys(req.body)[0]);
+    var data;
+    try {
+     data = JSON.parse(Object.keys(req.body)[0]);
+    }
+    catch {
+     data = req.body;
+    }
     User.findOne({ username: data.username }, (error, user) => {
         if (error || !user) {
             res.status(400).json({ error: "Niepoprawna nazwa użytkownika" })
@@ -117,22 +128,23 @@ app.get("/catalogue/:month", (req, res) => {
     // }
     var discount = 40;
     var userId = req.query.userId ? req.query.userId : "";
-    if (req.params.month == 1) {
-        skus = january.map(el => el.sku);
-    } else if (req.params.month == 2) {
-        skus = february.map(el => el.sku);
+    if (req.params.month == 7) {
+        skus = july.map(el => el.sku);
+    } else if (req.params.month == 4) {
+        skus = april.map(el => el.sku);
     }
     User.findOne({ _id: userId }, (error, user) => {
         if (error) {} else {
             discount = user.discount;
         }
+        res.json({ products: aprilFull, discount: discount });
         // fs.writeFile("./test.txt", skus.map(el => '"' + el + '"').join(", "), function(err) {
         //     if (err) {
         //         return console.log(err);
         //     }
         //     console.log("The file was saved!");
         // });
-        // axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202302/?brochureId=C02_PL_R_CORE", { skus })
+        // axios.post("https://api.ce.avon.digital-catalogue.com/avon-mas/PL/product/view-data/202307/?brochureId=C07_PL_R_CORE", { skus })
         //     .then(resp => {
         //         const resProducts = [];
         //         resp.data.result.filter(el => el.categoryTags && el.categoryTags.length).forEach(product => {
@@ -169,12 +181,12 @@ app.get("/catalogue/:month", (req, res) => {
         //                 })
         //             })
         //         })
-        //         res.json({ products: february, discount: discount });
+        //         res.json({ products: resProducts, discount: discount });
         //     })
         //     .catch(err => {
         //         res.status(500).json({ error: "Błąd serwera" })
         //     })
-        res.json({ products: february, discount: discount });
+            // res.json({ products: february, discount: discount });
     });
 
 
@@ -395,7 +407,7 @@ app.get("/products", (req, resp) => {
                             })
                             axios.post(API_URL, apiParams4, {
                                 headers: headers
-                            }).then(async res4 => {
+                            }).then(res4 => {
                                 resProducts.push(...Object.entries(res4.data.products).map(el => {
                                     return {
                                         _id: el[0],
@@ -406,7 +418,35 @@ app.get("/products", (req, resp) => {
                                         soldQuantity: 0
                                     }
                                 }));
-                                const orders = [];
+                                const methodParams5 = JSON.stringify({ 'inventory_id': storageId, page: 3 });
+                        const apiParams5 = new URLSearchParams({
+                            method: "getInventoryProductsList",
+                            parameters: methodParams5
+                        })
+                        axios.post(API_URL, apiParams5, {
+                            headers: headers
+                        }).then(res5 => {
+                            const productIds3 = Object.keys(res5.data.products).map(el => parseInt(el));
+                            const methodParams6 = JSON.stringify({ 'inventory_id': storageId, products: productIds3 });
+                            const apiParams6 = new URLSearchParams({
+                                method: "getInventoryProductsData",
+                                parameters: methodParams6
+                            })
+                        })
+                        axios.post(API_URL, apiParams4, {
+                            headers: headers
+                        }).then(async res6 => {
+                            resProducts.push(...Object.entries(res6.data.products).map(el => {
+                                return {
+                                    _id: el[0],
+                                    name: el[1].text_fields.name,
+                                    price: parseFloat(el[1].prices[priceGroupId]),
+                                    sku: el[1].sku,
+                                    imageUrl: Object.values(el[1].images)[0],
+                                    soldQuantity: 0
+                                }
+                            }));
+                            const orders = [];
                                 const getOrders = async function(date) {
                                     var methodParams6 = JSON.stringify({ "date_confirmed_from": date + 1 });
                                     var apiParams6 = new URLSearchParams({
@@ -437,6 +477,8 @@ app.get("/products", (req, resp) => {
                                 }
 
                                 const apiOrders = await getOrders(0);
+                        })
+                                
 
 
                             })
@@ -552,36 +594,61 @@ app.post("/invoice", (req, res) => {
                     const promises = [];
                     var sum = 0;
                     var sum2 = 0;
-                    resProducts.forEach(product => {
-                        sum += (product.price + 0.2) * product.amount
-                        sum2 += product.price * product.amount
-                        var methodParamss = JSON.stringify({
-                            'order_id': orderNr,
-                            'product_id': product.id,
-                            "price_brutto": product.price + 0.2,
-                            "tax_rate": 23,
-                            "name": product.name,
-                            "quantity": product.amount
-                        });
-                        var apiParamss = new URLSearchParams({
-                            method: "addOrderProduct",
-                            parameters: methodParamss
-                        });
-                        let promise = axios.post(API_URL, apiParamss, {
-                            headers: headers
-                        });
-                        promises.push(promise);
+                    // resProducts.forEach(product => {
+                    //     sum += (product.price + 0.2) * product.amount
+                    //     sum2 += product.price * product.amount
+                    //     var methodParamss = JSON.stringify({
+                    //         'order_id': orderNr,
+                    //         'product_id': product.id,
+                    //         "price_brutto": product.price + 0.2,
+                    //         "tax_rate": 23,
+                    //         "name": product.name,
+                    //         "quantity": product.amount
+                    //     });
+                    //     var apiParamss = new URLSearchParams({
+                    //         method: "addOrderProduct",
+                    //         parameters: methodParamss
+                    //     });
+                    //     let promise = axios.post(API_URL, apiParamss, {
+                    //         headers: headers
+                    //     });
+                    //     promises.push(promise);
 
+                    // })
+                    // Promise.allSettled(promises)
+                    //     .then(values => {
+                    //         var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
+                    //         var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
+                    //         res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
+                    //     })
+                    //     .catch(err => {
+
+                    //     })
+                    var positions = [];
+
+                    resProducts.forEach(product=> {
+                        positions.push({
+                            name: product.name,
+                            tax: 23,
+                            total_price_gross : Math.round((product.price + 0.2) * product.amount * 100)/ 100,
+                            quantity: product.amount
+                        })
                     })
-                    Promise.allSettled(promises)
-                        .then(values => {
-                            var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
-                            var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
-                            res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
-                        })
-                        .catch(err => {
 
-                        })
+                    var json = JSON.stringify({
+                        api_token: "dYDMeC5cgz9uaZQ533GC",
+                        invoice: {
+                            positions
+                        }
+                    })
+
+                    axios.put(`https://perfumeriasasanka.fakturownia.pl/invoices/${orderNr}.json`, json,
+                    {headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }}).then(response => {
+                        res.send({ countSuccessPrice: 0, countErrorPrice: 0, countSuccessSku: 0, countErrorSku: 0});
+                    })
 
                 }
             })
