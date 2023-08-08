@@ -37,10 +37,8 @@ const Schema = mongoose.Schema;
 const UserSchema = new Schema({
     username: { type: String, unique: true, required: true },
     password: String,
-    baselinkerToken: String,
-    storageId: String,
-    priceGroupId: String,
-    discount: Number
+    fakturowniaToken: String,
+    fakturowniaDomain: String,
 });
 
 const User = mongoose.model('user', UserSchema);
@@ -53,24 +51,38 @@ app.get("/catalogue_new", (req, res) => {
 })
 app.post("/check", (req, res) => {
     var token = JSON.parse(Object.keys(req.body)[0]).token;
-    const methodParams = JSON.stringify({});
-    const apiParams = new URLSearchParams({
-        method: "getInventories",
-        parameters: methodParams
-    });
-    axios.post(API_URL, apiParams, {
-        headers: {
-            'X-BLToken': token
-        }
-    }).then(resp => {
-        if (resp.data.status === "SUCCESS" && resp.data.inventories && resp.data.inventories.length) {
-            res.json({ success: true, inventoryId: resp.data.inventories[0].inventory_id, priceGroupId: resp.data.inventories[0].price_groups[0] })
-        } else {
-            res.json({ success: false })
-        }
+    var domain = JSON.parse(Object.keys(req.body)[0]).domain;
+
+    
+
+    axios.get(`https://${domain}.fakturownia.pl/invoices.json?period=this_month&page=1&per_page=25&api_token=${token}`,
+    {headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }}).then(response => {
+        res.json({ success: true })
     }).catch(err => {
         res.json({ success: false })
     })
+
+    // const methodParams = JSON.stringify({});
+    // const apiParams = new URLSearchParams({
+    //     method: "getInventories",
+    //     parameters: methodParams
+    // });
+    // axios.post(API_URL, apiParams, {
+    //     headers: {
+    //         'X-BLToken': token
+    //     }
+    // }).then(resp => {
+    //     if (resp.data.status === "SUCCESS" && resp.data.inventories && resp.data.inventories.length) {
+    //         res.json({ success: true, inventoryId: resp.data.inventories[0].inventory_id, priceGroupId: resp.data.inventories[0].price_groups[0] })
+    //     } else {
+    //         res.json({ success: false })
+    //     }
+    // }).catch(err => {
+    //     res.json({ success: false })
+    // })
 
 })
 app.post("/register", (req, res) => {
@@ -80,9 +92,7 @@ app.post("/register", (req, res) => {
             username: data.username,
             password: hash,
             fakturowniaToken: data.token,
-            storageId: data.inventoryId,
-            priceGroupId: data.priceGroupId,
-            discount: data.discount
+            fakturowniaDomain: data.domain
         });
         user.save()
             .then(saved => {
@@ -575,7 +585,7 @@ app.post("/prices", (req, res) => {
     }
 })
 
-app.post("/invoice", (req, res) => {
+app.put("/invoice", (req, res) => {
     try {
         var userId = req.query.userId ? req.query.userId : "",
             orderNr = req.query.orderNr ? req.query.orderNr : "";
@@ -584,46 +594,9 @@ app.post("/invoice", (req, res) => {
                 if (error || !user) {
                     res.status(500).json({ error: "Błąd serwera" })
                 } else {
-                    const token = user.baselinkerToken;
-                    const storageId = user.storageId;
-                    const priceGroupId = user.priceGroupId;
-                    const headers = {
-                        'X-BLToken': token
-                    }
-                    const resProducts = JSON.parse(Object.keys(req.body)[0]);
-                    const promises = [];
-                    var sum = 0;
-                    var sum2 = 0;
-                    // resProducts.forEach(product => {
-                    //     sum += (product.price + 0.2) * product.amount
-                    //     sum2 += product.price * product.amount
-                    //     var methodParamss = JSON.stringify({
-                    //         'order_id': orderNr,
-                    //         'product_id': product.id,
-                    //         "price_brutto": product.price + 0.2,
-                    //         "tax_rate": 23,
-                    //         "name": product.name,
-                    //         "quantity": product.amount
-                    //     });
-                    //     var apiParamss = new URLSearchParams({
-                    //         method: "addOrderProduct",
-                    //         parameters: methodParamss
-                    //     });
-                    //     let promise = axios.post(API_URL, apiParamss, {
-                    //         headers: headers
-                    //     });
-                    //     promises.push(promise);
-
-                    // })
-                    // Promise.allSettled(promises)
-                    //     .then(values => {
-                    //         var countSuccessSku = values.filter(el => el.status === "fulfilled" && el.value.data.status === "SUCCESS" && Object.entries(el.value.data.warnings).length === 0).length;
-                    //         var countErrorSku = values.filter(el => el.status === "rejected" || el.value.data.status !== "SUCCESS" || Object.entries(el.value.data.warnings).length > 0).length;
-                    //         res.send({ countSuccessPrice, countErrorPrice, countSuccessSku, countErrorSku });
-                    //     })
-                    //     .catch(err => {
-
-                    //     })
+                    const token = user.fakturowniaToken;
+                    const domain = user.fakturowniaDomain;
+                    const resProducts = JSON.parse(Object.keys(req.body)[0]);                    
                     var positions = [];
 
                     resProducts.forEach(product=> {
@@ -636,18 +609,20 @@ app.post("/invoice", (req, res) => {
                     })
 
                     var json = JSON.stringify({
-                        api_token: "dYDMeC5cgz9uaZQ533GC",
+                        api_token: token,
                         invoice: {
                             positions
                         }
                     })
 
-                    axios.put(`https://perfumeriasasanka.fakturownia.pl/invoices/${orderNr}.json`, json,
+                    axios.put(`https://${domain}.fakturownia.pl/invoices/${orderNr}.json`, json,
                     {headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }}).then(response => {
-                        res.send({ countSuccessPrice: 0, countErrorPrice: 0, countSuccessSku: 0, countErrorSku: 0});
+                        res.send({ invoiceNr: response.data.id});
+                    }).catch(err =>{
+                        res.status(500).json({ error: "Nie udało się dodać produktów do faktury" })
                     })
 
                 }
@@ -655,6 +630,86 @@ app.post("/invoice", (req, res) => {
         } else {
             res.status(500).json({ error: "Podaj nr zamówienia" })
         }
+    } catch (err) {
+        res.status(500).json({ error: "Błąd serwera" })
+    }
+})
+
+app.post("/invoice", (req, res) => {
+
+    var formatDate = date => {
+        return `${date.getFullYear()}-${date.getMonth() + 1 > 9 ? date.getMonth() + 1 : "0" + (date.getMonth() + 1)}-${date.getDate() > 9 ? date.getDate() : "0" + date.getDate()}`
+    }
+
+    try {
+        var userId = req.query.userId ? req.query.userId : "",
+            orderNr = req.query.orderNr ? req.query.orderNr : "";
+            User.findOne({ _id: userId }, (error, user) => {
+                if (error || !user) {
+                    res.status(500).json({ error: "Błąd serwera" })
+                } else {
+                    const token = user.fakturowniaToken;
+                    const domain = user.fakturowniaDomain;
+                    const customerData = JSON.parse(Object.keys(req.body)[0]);
+                    const resProducts = customerData.selectedProducts;                    
+                    var positions = [];
+                    var dateTo = customerData.date;
+                    resProducts.forEach(product=> {
+                        positions.push({
+                            name: product.name,
+                            tax: 23,
+                            total_price_gross : Math.round((product.price + 0.2) * product.amount * 100)/ 100,
+                            quantity: product.amount
+                        })
+                    })
+
+                    var invoiceDate = new Date(customerData.date);
+                    var invoiceDateTo = new Date();
+                    invoiceDateTo.setDate(invoiceDate.getDate() + 14);
+
+                    var invoiceDateString = formatDate(invoiceDate);
+                    var invoiceDateStringTo = formatDate(invoiceDateTo);
+
+                    var invoice = {
+                        kind: "vat",
+                            number: null,
+                            sell_date: invoiceDateString,
+                            issue_date: invoiceDateString,
+                            payment_to: invoiceDateStringTo,
+                            buyer_name: customerData.companyName,
+                            buyer_tax_no: customerData.nip,
+                            buyer_country: "PL",
+                            positions
+                    }
+
+                    if (customerData.street){
+                        invoice.buyer_street = customerData.street;
+                    }
+                    if (customerData.postalCode){
+                        invoice.buyer_post_code = customerData.postalCode;
+                    }
+                    if (customerData.city){
+                        invoice.buyer_city = customerData.city;
+                    }
+
+                    var json = JSON.stringify({
+                        api_token: token,
+                        invoice
+                    })
+
+                    axios.post(`https://${domain}.fakturownia.pl/invoices.json`, json,
+                    {headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }}).then(response => {
+                        res.send({ invoiceNr: response.data.id});
+                    }).catch(err =>{
+                        res.status(500).json({ error: "Nie udało się utworzyć faktury" })
+                    })
+
+                }
+            })
+        
     } catch (err) {
         res.status(500).json({ error: "Błąd serwera" })
     }
