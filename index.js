@@ -628,7 +628,7 @@ app.put("/invoice", (req, res) => {
                 }
             })
         } else {
-            res.status(500).json({ error: "Podaj nr zamówienia" })
+            res.status(500).json({ error: "Podaj nr faktury" })
         }
     } catch (err) {
         res.status(500).json({ error: "Błąd serwera" })
