@@ -79,7 +79,7 @@ app.post("/register", (req, res) => {
         var user = new User({
             username: data.username,
             password: hash,
-            baselinkerToken: data.token,
+            fakturowniaToken: data.token,
             storageId: data.inventoryId,
             priceGroupId: data.priceGroupId,
             discount: data.discount
