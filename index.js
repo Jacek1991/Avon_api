@@ -620,7 +620,7 @@ app.put("/invoice", (req, res) => {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }}).then(response => {
-                        res.send({ invoiceNr: response.data.id});
+                        res.send({ invoiceNr: response.data.number});
                     }).catch(err =>{
                         res.status(500).json({ error: "Nie udało się dodać produktów do faktury" })
                     })
@@ -702,7 +702,7 @@ app.post("/invoice", (req, res) => {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }}).then(response => {
-                        res.send({ invoiceNr: response.data.id});
+                        res.send({ invoiceNr: response.data.number});
                     }).catch(err =>{
                         res.status(500).json({ error: "Nie udało się utworzyć faktury" })
                     })
