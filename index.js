@@ -596,14 +596,31 @@ app.put("/invoice", (req, res) => {
                 } else {
                     const token = user.fakturowniaToken;
                     const domain = user.fakturowniaDomain;
-                    const resProducts = JSON.parse(Object.keys(req.body)[0]);                    
+                    const resProducts = JSON.parse(Object.keys(req.body)[0]).selectedProducts,
+                    modifier = JSON.parse(Object.keys(req.body)[0]).modifier,
+                    modifierAmount = JSON.parse(Object.keys(req.body)[0]).modifierAmount,
+                    modifierCurrency = JSON.parse(Object.keys(req.body)[0]).modifierCurrency;                    
                     var positions = [];
 
                     resProducts.forEach(product=> {
+                        var newPrice;
+                        if (modifierCurrency === 'zl'){
+                            if (modifier === 'plus'){
+                                newPrice = product.price + modifierAmount;
+                            } else {
+                                newPrice = productPrice - modifierAmount;
+                            }
+                        } else {
+                            if (modifier === 'plus'){
+                                newPrice = (product.price * (100 + modifierAmount)) / 100
+                            } else {
+                                newPrice = (product.price * (100 - modifierAmount)) / 100
+                            }
+                        }
                         positions.push({
                             name: product.name,
                             tax: 23,
-                            total_price_gross : Math.round((product.price + 0.2) * product.amount * 100)/ 100,
+                            total_price_gross : Math.round(newPrice * product.amount * 100)/ 100,
                             quantity: product.amount
                         })
                     })
@@ -651,14 +668,31 @@ app.post("/invoice", (req, res) => {
                     const token = user.fakturowniaToken;
                     const domain = user.fakturowniaDomain;
                     const customerData = JSON.parse(Object.keys(req.body)[0]);
-                    const resProducts = customerData.selectedProducts;                    
+                    const resProducts = customerData.selectedProducts,
+                    modifier = JSON.parse(Object.keys(req.body)[0]).modifier,
+                    modifierAmount = JSON.parse(Object.keys(req.body)[0]).modifierAmount,
+                    modifierCurrency = JSON.parse(Object.keys(req.body)[0]).modifierCurrency;                    
                     var positions = [];
                     var dateTo = customerData.date;
                     resProducts.forEach(product=> {
+                        var newPrice;
+                        if (modifierCurrency === 'zl'){
+                            if (modifier === 'plus'){
+                                newPrice = product.price + modifierAmount;
+                            } else {
+                                newPrice = productPrice - modifierAmount;
+                            }
+                        } else {
+                            if (modifier === 'plus'){
+                                newPrice = (product.price * (100 + modifierAmount)) / 100
+                            } else {
+                                newPrice = (product.price * (100 - modifierAmount)) / 100
+                            }
+                        }
                         positions.push({
                             name: product.name,
                             tax: 23,
-                            total_price_gross : Math.round((product.price + 0.2) * product.amount * 100)/ 100,
+                            total_price_gross : Math.round(newPrice * product.amount * 100)/ 100,
                             quantity: product.amount
                         })
                     })
