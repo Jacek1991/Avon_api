@@ -608,7 +608,7 @@ app.put("/invoice", (req, res) => {
                             if (modifier === 'plus'){
                                 newPrice = product.price + modifierAmount;
                             } else {
-                                newPrice = productPrice - modifierAmount;
+                                newPrice = product.price - modifierAmount;
                             }
                         } else {
                             if (modifier === 'plus'){
@@ -680,7 +680,7 @@ app.post("/invoice", (req, res) => {
                             if (modifier === 'plus'){
                                 newPrice = product.price + modifierAmount;
                             } else {
-                                newPrice = productPrice - modifierAmount;
+                                newPrice = product.price - modifierAmount;
                             }
                         } else {
                             if (modifier === 'plus'){
