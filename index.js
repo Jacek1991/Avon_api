@@ -757,7 +757,7 @@ const PORT = process.env.PORT || 1337;
 app.listen(PORT, () => {
     console.log(`Server started on port ${PORT}`)
     setInterval(() => {
-        axios.get("/https://invoiceapi.onrender.com/ping").then(res =>{
+        axios.get("https://invoiceapi.onrender.com/ping").then(res =>{
 
         })
     }, 300000);
